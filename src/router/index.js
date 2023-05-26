@@ -135,6 +135,12 @@ const routes = [
     meta: { title: '案例' },
     component: () => import('@/views/advanced'),
   },
+  {
+    path: '/21-three',
+    name: '21-three',
+    meta: { title: '3d' },
+    component: () => import('@/views/21-three/index.vue'),
+  },
 ];
 
 const router = new VueRouter({

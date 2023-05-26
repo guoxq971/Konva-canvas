@@ -7788,6 +7788,11 @@
     "loader-utils" "^1.1.0"
     "neo-async" "^2.6.0"
 
+"three@^0.152.2":
+  "integrity" "sha512-Ff9zIpSfkkqcBcpdiFo2f35vA9ZucO+N8TNacJOqaEE6DrB0eufItVMib8bK8Pcju/ZNT6a7blE1GhTpkdsILw=="
+  "resolved" "https://registry.npmjs.org/three/-/three-0.152.2.tgz"
+  "version" "0.152.2"
+
 "throttle-debounce@^1.0.1":
   "integrity" "sha512-XH8UiPCQcWNuk2LYePibW/4qL97+ZQ1AN3FNXwZRBNPPowo/NRU5fAlDCSNBJIYCKbioZfuYtMhG4quqoJhVzg=="
   "resolved" "https://registry.npmjs.org/throttle-debounce/-/throttle-debounce-1.1.0.tgz"

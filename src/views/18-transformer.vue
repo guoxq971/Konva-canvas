@@ -6,7 +6,6 @@
 
 <script>
 import Konva from 'konva';
-import { shapes } from 'konva/lib/Shape';
 
 export default {
   data() {
