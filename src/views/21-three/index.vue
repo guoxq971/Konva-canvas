@@ -10,7 +10,8 @@
 import Konva from 'konva';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import model, { obj, change, center } from './model';
+import { obj, change, center, find, initModel } from './model';
+
 export default {
   data() {
     return {
@@ -26,9 +27,9 @@ export default {
       const imgChange = () => {
         const target = this.layer.children.find((e) => e.attrs.name === 'test');
         if (!target) return;
-        console.log('图', JSON.parse(JSON.stringify(target)));
-        console.log('initPosition', initPosition);
-        console.log('this.layer', this.layer);
+        // console.log('图', JSON.parse(JSON.stringify(target)));
+        // console.log('initPosition', initPosition);
+        // console.log('this.layer', this.layer);
         const { x, y, width, height, scaleX, scaleY } = target.attrs;
         // 图片当前的位置
         const sx = scaleX || 1;
@@ -41,12 +42,14 @@ export default {
         obj.dy = dy;
         obj.width = w * sx;
         obj.height = h * sy;
-        console.log('model obj', obj);
+        // console.log('model obj', obj);
         change();
       };
       const el = document.getElementById('canvas');
       if (!el) return;
-      const { clientWidth, clientHeight } = el;
+      // const { clientWidth, clientHeight } = el;
+      const clientWidth = 1024;
+      const clientHeight = 1024;
       this.stage = new Konva.Stage({
         container: 'canvas',
         width: clientWidth,
@@ -58,12 +61,12 @@ export default {
       const imageObj = new Image();
       imageObj.src = './test.jpg';
       imageObj.onload = () => {
-        const width = imageObj.width / 3;
-        const height = imageObj.height / 3;
+        const width = imageObj.width;
+        const height = imageObj.height;
         const yoda = new Konva.Image({
           name: 'test',
-          x: clientWidth / 2 - width / 2,
-          y: clientHeight / 2 - height / 2,
+          x: 0, //clientWidth / 2 - width / 2,
+          y: 0, //clientHeight / 2 - height / 2,
           image: imageObj,
           width: width,
           height: height,
@@ -78,15 +81,21 @@ export default {
         // 初始化模型
         this.threeInit();
       };
+      imageObj.onerror = (e) => {
+        console.log('图片加载失败', e);
+      };
 
+      // uv图
       const uvObj = new Image();
-      uvObj.src = './uv.png';
+      uvObj.src = './uv1.png';
       uvObj.onload = () => {
-        const width = uvObj.width / 1.3;
-        const height = uvObj.height / 1.3;
+        // const width = uvObj.width / 1.3;
+        // const height = uvObj.height / 1.3;
+        const width = uvObj.width;
+        const height = uvObj.height;
         const yoda = new Konva.Image({
-          x: clientWidth / 2 - width / 2,
-          y: clientHeight / 2 - height / 2,
+          x: 0, //clientWidth / 2 - width / 2,
+          y: 0, //clientHeight / 2 - height / 2,
           image: uvObj,
           width: width,
           height: height,
@@ -184,14 +193,22 @@ export default {
       renderer.setClearColor(color.gray);
       renderer.render(scene, camera);
       this.$refs.threeBox.appendChild(renderer.domElement);
+      console.log('three.js 初始化');
 
       // 物体
-      scene.add(model);
-      this.modelInitAfter();
+      initModel(scene, (model) => {
+        this.modelInitAfter();
+        // const mesh = find();
+        // scene.lookAt(mesh.geometry.boundingSphere.center);
+        // scene.lookAt(mesh.geometry.boundingBox.min);
+        // scene.lookAt(mesh.position);
+      });
+      // scene.add(model);
 
       // 坐标轴
-      const axesHelper = new THREE.AxesHelper(250);
+      // const axesHelper = new THREE.AxesHelper(250);
       // scene.add(axesHelper);
+
       // 光源
       // 点光源
       const light = new THREE.PointLight(color.white, 1);
@@ -215,7 +232,7 @@ export default {
     },
     // 模型初始化后
     modelInitAfter() {
-      console.log(this.layer.children);
+      // console.log(this.layer.children);
       const target = this.layer.children.find((e) => e.attrs.name === 'test');
       if (!target) return;
       const { x, y, width, height } = target.attrs; // 图片当前的位置
@@ -230,6 +247,9 @@ export default {
       change();
       center();
       // console.log(x, y, width, height);
+
+      const mesh = find();
+      // console.log('mesh', mesh);
     },
   },
   mounted() {
@@ -245,18 +265,22 @@ export default {
 .index {
   height: 100%;
   display: flex;
-  border: 1px solid #666;
   .model-wrap {
     width: 200px;
     height: 100%;
-    background-color: #fff;
+    canvas {
+      //border: 1px solid #666;
+      //background-color: #fff;
+    }
   }
   #canvas {
     margin: 0 30px;
     flex: 1;
-    background-color: #eee;
-    border: 1px solid #666;
     height: 100%;
+    canvas {
+      background-color: #eee;
+      border: 1px solid #666;
+    }
   }
   .three-wrap {
     width: 350px;

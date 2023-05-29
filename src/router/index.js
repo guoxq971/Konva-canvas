@@ -141,6 +141,12 @@ const routes = [
     meta: { title: '3d' },
     component: () => import('@/views/21-three/index.vue'),
   },
+  {
+    path: '/22-three',
+    name: '22three',
+    meta: { title: '3d-2' },
+    component: () => import('@/views/22-three/index.vue'),
+  },
 ];
 
 const router = new VueRouter({
