@@ -93,7 +93,7 @@ export default {
     // 视图 item 点击事件
     onClickByView(item) {
       this.activeView = item.name;
-      this.curCanvas.addView(item.url, { name: item.id });
+      // this.curCanvas.addView(item.url, { name: item.id });
     },
     // 模型 item 点击事件
     onClickByModel(item) {
