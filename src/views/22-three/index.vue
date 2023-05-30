@@ -16,10 +16,14 @@
       <div class="view-wrap list-wrap">
         <div class="title">视图</div>
         <div class="img-wrap" @click="onClickByView(item)" v-for="item in viewList" :key="item.id">
-          <img :src="item.url" alt="" />
+          <el-badge is-dot :hidden="viewDot(item.name)">
+            <img :src="item.url" alt="" />
+          </el-badge>
         </div>
       </div>
-      <div class="canvas-wrap" id="canvas-container"></div>
+      <div class="canvas-wrap">
+        <div v-show="item.name === activeView" v-for="(item, index) in viewList" :id="`canvas-container-${index + 1}`"></div>
+      </div>
       <div class="three-wrap" id="three-container"></div>
     </div>
   </div>
@@ -33,6 +37,8 @@ export default {
   data() {
     return {
       canvas: null, // 画布
+      activeView: null, // 当前视图
+      canvasList: [], // 画布列表
       three: null, // 3d
       modelList, // 模型列表
       viewList, // 视图列表
@@ -41,23 +47,55 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
+      const threeContainer = document.getElementById('three-container');
       // 初始化three
-      this.three = new InitThree(document.getElementById('three-container'), {
+      this.three = new InitThree(threeContainer, {
         callback: (that) => that.addModel(modelList[0].model_url),
       });
-      this.canvas = new InitCanvas(document.getElementById('canvas-container'));
+
+      for (let i = 0; i < this.viewList.length; i++) {
+        const view = this.viewList[i];
+        // 初始化canvas
+        const canvasContainer = document.getElementById(`canvas-container-${i + 1}`);
+        const canvas = new InitCanvas(canvasContainer, {
+          callback: (that) => that.addView(view.url, { name: view.id }),
+          name: view.name,
+        });
+        this.canvasList.push(canvas);
+      }
+      this.activeView = this.canvasList[0].name;
     });
   },
+  computed: {
+    viewDot() {
+      return (name) => {
+        const canvas = this.canvasList.find((item) => item.name === name);
+        return !(canvas && canvas.imageList.length > 0);
+      };
+    },
+    curCanvas() {
+      return this.canvasList.find((item) => item.name === this.activeView);
+    },
+  },
   methods: {
-    // design item 点击事件
+    // 设计图 item 点击事件
     onClickByDesign(item) {
-      this.canvas.addImage(item.url, { id: item.id });
+      this.curCanvas.addImage(item.url, {
+        id: item.id,
+        callback: (that, img, attrs) => {
+          this.three.addMap(this.activeView, attrs);
+        },
+        dragend: (that, img, attrs) => {
+          this.three.addMap(this.activeView, attrs);
+        },
+      });
     },
-    // view item 点击事件
+    // 视图 item 点击事件
     onClickByView(item) {
-      this.canvas.addView(item.url, { id: item.id });
+      this.activeView = item.name;
+      this.curCanvas.addView(item.url, { name: item.id });
     },
-    // model item 点击事件
+    // 模型 item 点击事件
     onClickByModel(item) {
       this.three.addModel(item.model_url);
     },

@@ -35,12 +35,10 @@ export function change() {
   if (model) {
     model.traverse(function (node) {
       if (node.isMesh && node.material && node.material.name === name) {
-        // console.log('node', node);
         // material.color = new THREE.Color(0, 1, 0);
         node.material = material;
         material.name = name;
         node.material.needsUpdate = true;
-        // console.log(name, 'node', node);
       }
     });
   }

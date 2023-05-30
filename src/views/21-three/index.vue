@@ -108,7 +108,6 @@ export default {
       // 组
       const selectionRect = new Konva.Rect({
         fill: 'rgba(0,0,255,0.1)',
-
         visible: false,
         stroke: 'rgba(0,0,255,0.5)',
         strokeWidth: 1,
