@@ -24,7 +24,7 @@ export class InitCanvas {
   // 变换器
   tr = new Konva.Transformer();
   name = null;
-  // 当前选中的视图id
+  // 当前的视图id
   activeViewId = null;
 
   /**
@@ -69,6 +69,11 @@ export class InitCanvas {
   // 设计图列表
   get imageList() {
     return this.findAllDesign();
+  }
+
+  // 视图
+  get view() {
+    return this.layer.children.find((e) => e.attrs.name === this.activeViewId);
   }
 
   // 查询当前图层中的所有设计图
@@ -123,7 +128,10 @@ export class InitCanvas {
 
     // 鼠标点击
     this.stage.on('click tap', (e) => {
+      // console.log('鼠标 点击 click');
       const dom = e.target;
+      // 如果是视图的image就跳过
+      if (dom.attrs.name === this.activeViewId) return;
       if (dom.getType() === 'Shape') {
         this.tr.nodes([dom]);
       } else {
@@ -136,8 +144,8 @@ export class InitCanvas {
       y2 = 0;
     // 鼠标按下
     this.stage.on('mousedown touchstart', (e) => {
-      // console.log('鼠标 down');
-      if (e.target !== this.stage) return;
+      // console.log('鼠标 按下 down');
+      if (e.target !== this.view) return;
       e.evt.preventDefault();
       const { x, y } = this.stage.getPointerPosition();
       x1 = x;
@@ -151,7 +159,7 @@ export class InitCanvas {
 
     // 鼠标移动
     this.stage.on('mousemove touchmove', (e) => {
-      // console.log('鼠标 move');
+      // console.log('鼠标 移动 move');
 
       // 组操作
       if (!selectionRect.visible()) return;
@@ -168,7 +176,7 @@ export class InitCanvas {
 
     // 鼠标弹起
     this.stage.on('mouseup touchend', (e) => {
-      // console.log('鼠标 up');
+      // console.log('鼠标 抬起 up');
       if (!this.stage) return;
 
       // 组操作
@@ -176,9 +184,13 @@ export class InitCanvas {
       setTimeout(() => {
         selectionRect.visible(false);
       });
-      const shapes = this.stage.find('.rect');
+      // 获取所有的设计图
+      const shapes = this.imageList;
+      // 获取框起来的矩形
       const box = selectionRect.getClientRect();
+      // 获取坐标在box内的所有设计图
       let selected = shapes.filter((shape) => Konva.Util.haveIntersection(box, shape.getClientRect()));
+      // 将box内的设计图添加到组中
       this.tr.nodes(selected);
     });
   }
@@ -257,7 +269,7 @@ export class InitCanvas {
     const _opt = Object.assign(param, opt);
 
     const img = new Image();
-    img.src = url;
+    img.src = url + `?t=${new Date().getTime()}`;
     // 解决图片跨域问题
     img.setAttribute('crossOrigin', 'anonymous');
     img.onload = () => {
@@ -270,7 +282,8 @@ export class InitCanvas {
         image: img,
         width: width,
         height: height,
-        draggable: _opt.draggable,
+        draggable: _opt.draggable, // 是否可拖拽
+        strokeEnabled: !_opt.isView, // 是否显示边框
       });
       this.layer.add(yoda);
 
@@ -285,6 +298,10 @@ export class InitCanvas {
       // 回调函数
       _opt.callback && _opt.callback(this, yoda, this.getAttrs());
 
+      // 监听点击事件
+      yoda.on('click', (e) => {
+        // console.log('点击');
+      });
       // 监听拖拽事件
       yoda.on('dragstart', (e) => {
         // console.log('拖拽开始');
@@ -302,6 +319,7 @@ export class InitCanvas {
       });
       yoda.on('transform', (e) => {
         // console.log('缩放中');
+        _opt.isView && yoda.strokeEnabled(false);
       });
       yoda.on('transformend', (e) => {
         // console.log('缩放结束');

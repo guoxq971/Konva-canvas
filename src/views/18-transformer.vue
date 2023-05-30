@@ -47,7 +47,7 @@ export default {
       this.layer.add(rect1);
 
       const rect2 = new Konva.Rect({
-        name: 'rect',
+        name: 'rect-2',
         x: clientWidth / 2 + 100,
         y: clientHeight / 2,
         width: 200,
@@ -70,9 +70,10 @@ export default {
       this.layer.add(this.tr);
 
       this.stage.on('click tap', (e) => {
+        // console.log('点击');
         const dom = e.target;
         if (dom.getType() === 'Shape') {
-          this.tr.nodes([dom]);
+          this.tr.nodes([this.stage]);
         } else {
           this.tr.nodes([]);
         }
@@ -82,6 +83,7 @@ export default {
         x2 = 0,
         y2 = 0;
       this.stage.on('mousedown touchstart', (e) => {
+        console.log('鼠标 按下 down');
         if (e.target !== this.stage) {
           return;
         }
@@ -97,6 +99,7 @@ export default {
       });
 
       this.stage.on('mousemove touchmove', (e) => {
+        console.log('鼠标 移动 move');
         if (!selectionRect.visible()) {
           return;
         }
@@ -112,6 +115,7 @@ export default {
       });
 
       this.stage.on('mouseup touchend', (e) => {
+        console.log('鼠标 抬起 up');
         if (!this.stage) {
           return;
         }
@@ -122,6 +126,8 @@ export default {
           selectionRect.visible(false);
         });
         const shapes = this.stage.find('.rect');
+        console.log('shapes', shapes);
+
         const box = selectionRect.getClientRect();
         let selected = shapes.filter((shape) => Konva.Util.haveIntersection(box, shape.getClientRect()));
         this.tr.nodes(selected);
