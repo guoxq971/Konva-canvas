@@ -47,15 +47,15 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      const threeContainer = document.getElementById('three-container');
       // 初始化three
+      const threeContainer = document.getElementById('three-container');
       this.three = new InitThree(threeContainer, {
         callback: (that) => that.addModel(modelList[0].model_url),
       });
 
+      // 初始化canvas
       for (let i = 0; i < this.viewList.length; i++) {
         const view = this.viewList[i];
-        // 初始化canvas
         const canvasContainer = document.getElementById(`canvas-container-${i + 1}`);
         const canvas = new InitCanvas(canvasContainer, {
           callback: (that) => that.addView(view.url, { name: view.id }),

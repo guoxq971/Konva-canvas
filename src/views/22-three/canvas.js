@@ -96,7 +96,8 @@ export class InitCanvas {
    * */
   async imageMoveCenter(image) {
     // 可能是id
-    if (typeof image === 'number') image = this.findImageById(image);
+    if (typeof image === 'number') image = this._findImageById(image);
+    if (!image) return console.error('图片移动居中失败: image is null');
     const { width, height } = image.attrs;
     image.attrs.x = (this.width - width) / 2;
     image.attrs.y = (this.height - height) / 2;
@@ -196,7 +197,7 @@ export class InitCanvas {
   }
 
   // 获取最大的zIndex
-  findMaxIndex() {
+  _findMaxIndex() {
     const children = this.layer.children;
     const max = children.reduce((prev, curr) => {
       const index = curr.zIndex();
@@ -208,15 +209,16 @@ export class InitCanvas {
   /**
    * 查找设计图根据id
    * @param {number} id 图片id
-   * @return {Promise<Konva.Image>}
+   * @return {Group | Shape | null}
    * */
-  async findImageById(id) {
+  _findImageById(id) {
     const children = this.layer.children;
     const image = children.find((item) => item.attrs.name === id);
     if (!image) {
-      return Promise.reject(`为找到该图片，id:${id}`);
+      console.error(`未找到id为${id}的图片`);
+      return null;
     }
-    return Promise.resolve(image);
+    return image;
   }
 
   /**
@@ -260,7 +262,7 @@ export class InitCanvas {
       isView: false, // 是否是视图
       draggable: true, // 是否可拖拽
       name: uuid(), // 图片id
-      zIndex: this.findMaxIndex() + 1, // 层级
+      zIndex: this._findMaxIndex() + 1, // 层级
       isMoveDown: false, //是否图片置底
       isCenter: true, // 是否居中
       callback: null, // 回调函数
@@ -273,6 +275,7 @@ export class InitCanvas {
     // 解决图片跨域问题
     img.setAttribute('crossOrigin', 'anonymous');
     img.onload = () => {
+      // 图片的高宽，如果是视图，就是画布的高宽
       const width = _opt.isView ? this.width : img.width;
       const height = _opt.isView ? this.height : img.height;
       const yoda = new Konva.Image({
@@ -284,6 +287,7 @@ export class InitCanvas {
         height: height,
         draggable: _opt.draggable, // 是否可拖拽
         strokeEnabled: !_opt.isView, // 是否显示边框
+        opacity: 1, // 透明度
       });
       this.layer.add(yoda);
 
@@ -298,6 +302,15 @@ export class InitCanvas {
       // 回调函数
       _opt.callback && _opt.callback(this, yoda, this.getAttrs());
 
+      // 监听鼠标按下
+      yoda.on('mousedown touchstart', (e) => {
+        this._setViewOpacity(yoda);
+      });
+      // 监听鼠标抬起
+      yoda.on('mouseup touchend', (e) => {
+        // console.log('鼠标 抬起 up');
+        this._setViewOpacity(yoda, 'up');
+      });
       // 监听点击事件
       yoda.on('click', (e) => {
         // console.log('点击');
@@ -349,5 +362,15 @@ export class InitCanvas {
    * */
   removeImage(id) {
     this.layer.children = this.layer.children.filter((item) => item.attrs.name !== id);
+  }
+
+  // 设计图按下时设置透明度
+  _setViewOpacity(img, type = 'down') {
+    if (type === 'down') {
+      if (img === this.view) return;
+      img.opacity(0.6);
+    } else {
+      img.opacity(1);
+    }
   }
 }

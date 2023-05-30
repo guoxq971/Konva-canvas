@@ -6,8 +6,8 @@ export const config = {
 
 // view 视图
 export const viewList = [
-  { id: 1, url: './uv/前面.png', name: '前面', imageList: [] },
-  { id: 2, url: './uv/背面.png', name: '背面', imageList: [] },
+  { id: 1, url: './uv/正面-透明.png', name: '前面', imageList: [] },
+  { id: 2, url: './uv/背面-透明.png', name: '背面', imageList: [] },
 ];
 
 export const modelList = [

@@ -15,9 +15,8 @@ export class InitThree {
     white: 0xffffff, // 白色
     gray: 0x808080, // 灰色
   };
-  // 渲染区域宽度
+  // 渲染区域 高宽
   width = 300;
-  // 渲染区域高度
   height = 700;
   // 场景
   scene = new THREE.Scene();
@@ -31,7 +30,7 @@ export class InitThree {
   constructor(container, opt) {
     // 参数
     const param = {
-      callback: null,
+      callback: null, // 回调函数
     };
     const _opt = Object.assign(param, opt);
 
