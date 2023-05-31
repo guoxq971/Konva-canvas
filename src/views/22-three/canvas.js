@@ -23,24 +23,31 @@ export class InitCanvas {
   layer = new Konva.Layer();
   // 变换器
   tr = new Konva.Transformer();
-  name = null;
+  // 当前视图的name
+  viewName = '';
   // 当前的视图id
   activeViewId = null;
+  // 3d模型
+  three = null;
 
   /**
    * 初始化canvas
    * @param {HTMLElement} container 容器
    * @param {object} opt 参数
    * @param {function} opt.callback 回调函数
+   * @param {string} opt.name view的name
+   * @param {InitThree} opt.three three实例
    * */
   constructor(container, opt) {
     // 参数
     const param = {
       callback: null,
       name: '', //view的name
+      three: null, //three实例
     };
     const _opt = Object.assign(param, opt);
-    this.name = _opt.name;
+    this.viewName = _opt.name;
+    this.three = _opt.three;
     if (container) {
       //画布高宽
       container.width = this.width;
@@ -62,39 +69,40 @@ export class InitCanvas {
       this._installDelete();
 
       // 回调函数
-      _opt.callback && _opt.callback(this, this.getAttrs());
+      _opt.callback && _opt.callback(this);
     }
   }
 
   // 设计图列表
   get imageList() {
-    return this.findAllDesign();
-  }
-
-  // 视图
-  get view() {
-    return this.layer.children.find((e) => e.attrs.name === this.activeViewId);
-  }
-
-  // 查询当前图层中的所有设计图
-  findAllDesign() {
     return this.layer.children.filter((e) => {
+      // 排除 视图(uv)image
       return ![this.activeViewId].includes(e.attrs.name) && e.className === 'Image';
     });
   }
 
-  // 所有设计图的attrs
-  getAttrs() {
-    return this.findAllDesign().map((e) => {
-      return e.attrs;
-    });
+  // 视图(uv)image
+  get view() {
+    return this.layer.children.find((e) => e.attrs.name === this.activeViewId);
+  }
+
+  // 当前视图中所有设计图的attrs
+  get attrs() {
+    return this.imageList.map((e) => e.attrs);
+  }
+
+  // 更新3d模型对应uv的贴图
+  _updateModelMap() {
+    if (this.three) {
+      this.three.addMap(this.viewName, this.attrs);
+    }
   }
 
   /**
    * 图片移动居中
    * @param {Konva.Image|number} image 图片
    * */
-  async imageMoveCenter(image) {
+  _imageMoveCenter(image) {
     // 可能是id
     if (typeof image === 'number') image = this._findImageById(image);
     if (!image) return console.error('图片移动居中失败: image is null');
@@ -298,17 +306,21 @@ export class InitCanvas {
       // this.stage.draw(); // 重绘
       yoda.setZIndex(_opt.zIndex);
       // 图片居中
-      if (_opt.isCenter) this.imageMoveCenter(yoda);
+      if (_opt.isCenter) this._imageMoveCenter(yoda);
       // 回调函数
-      _opt.callback && _opt.callback(this, yoda, this.getAttrs());
+      _opt.callback && _opt.callback(this, yoda);
+      // 更新3d模型对应视图的贴图
+      this._updateModelMap();
 
       // 监听鼠标按下
       yoda.on('mousedown touchstart', (e) => {
+        // 设置透明度
         this._setViewOpacity(yoda);
       });
       // 监听鼠标抬起
       yoda.on('mouseup touchend', (e) => {
         // console.log('鼠标 抬起 up');
+        // 设置透明度
         this._setViewOpacity(yoda, 'up');
       });
       // 监听点击事件
@@ -324,19 +336,21 @@ export class InitCanvas {
       });
       yoda.on('dragend', (e) => {
         // console.log('拖拽结束');
-        _opt.dragend && _opt.dragend(this, yoda, this.getAttrs());
+        // 更新3d模型对应视图的贴图
+        this._updateModelMap();
       });
       // 监听缩放事件
       yoda.on('transformstart', (e) => {
-        // console.log('缩放开始');
+        /*console.log('缩放开始');*/
       });
       yoda.on('transform', (e) => {
         // console.log('缩放中');
-        _opt.isView && yoda.strokeEnabled(false);
+        // _opt.isView && yoda.strokeEnabled(false);
       });
       yoda.on('transformend', (e) => {
         // console.log('缩放结束');
-        _opt.dragend && _opt.dragend(this, yoda, this.getAttrs());
+        // 更新3d模型对应视图的贴图
+        this._updateModelMap();
       });
       // 监听旋转事件
       yoda.on('rotatestart', (e) => {
@@ -344,11 +358,13 @@ export class InitCanvas {
       });
       yoda.on('rotate', (e) => {
         // console.log('旋转中');
-        _opt.dragend && _opt.dragend(this, yoda, this.getAttrs());
+        // 更新3d模型对应视图的贴图
+        this._updateModelMap();
       });
       yoda.on('rotateend', (e) => {
         // console.log('旋转结束');
-        _opt.dragend && _opt.dragend(this, yoda, this.getAttrs());
+        // 更新3d模型对应视图的贴图
+        this._updateModelMap();
       });
     };
     img.onerror = () => {

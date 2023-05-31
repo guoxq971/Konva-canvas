@@ -22,7 +22,7 @@
         </div>
       </div>
       <div class="canvas-wrap">
-        <div v-show="item.name === activeView" v-for="(item, index) in viewList" :id="`canvas-container-${index + 1}`"></div>
+        <div v-show="item.name === activeViewName" v-for="(item, index) in viewList" :id="`canvas-container-${index + 1}`"></div>
       </div>
       <div class="three-wrap" id="three-container"></div>
     </div>
@@ -36,8 +36,7 @@ import { InitCanvas } from '@/views/22-three/canvas';
 export default {
   data() {
     return {
-      canvas: null, // 画布
-      activeView: null, // 当前视图
+      activeViewName: null, // 当前视图name
       canvasList: [], // 画布列表
       three: null, // 3d
       modelList, // 模型列表
@@ -60,40 +59,34 @@ export default {
         const canvas = new InitCanvas(canvasContainer, {
           callback: (that) => that.addView(view.url, { name: view.id }),
           name: view.name,
+          three: this.three,
         });
         this.canvasList.push(canvas);
       }
-      this.activeView = this.canvasList[0].name;
+      this.activeViewName = this.canvasList[0].viewName;
     });
   },
   computed: {
+    // 视图是否有图片 true-有 false-无
     viewDot() {
       return (name) => {
-        const canvas = this.canvasList.find((item) => item.name === name);
+        const canvas = this.canvasList.find((item) => item.viewName === name);
         return !(canvas && canvas.imageList.length > 0);
       };
     },
+    // 当前激活视图的canvas
     curCanvas() {
-      return this.canvasList.find((item) => item.name === this.activeView);
+      return this.canvasList.find((item) => item.viewName === this.activeViewName);
     },
   },
   methods: {
     // 设计图 item 点击事件
     onClickByDesign(item) {
-      this.curCanvas.addImage(item.url, {
-        id: item.id,
-        callback: (that, img, attrs) => {
-          this.three.addMap(this.activeView, attrs);
-        },
-        dragend: (that, img, attrs) => {
-          this.three.addMap(this.activeView, attrs);
-        },
-      });
+      this.curCanvas?.addImage(item.url, { id: item.id });
     },
     // 视图 item 点击事件
     onClickByView(item) {
-      this.activeView = item.name;
-      // this.curCanvas.addView(item.url, { name: item.id });
+      this.activeViewName = item.name;
     },
     // 模型 item 点击事件
     onClickByModel(item) {

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <div style="display: flex; justify-content: center">
+    <div style="display: flex; justify-content: center" v-show="false">
       <button v-for="item in list" :key="item.path" style="margin-right: 20px; padding: 5px" @click="onClick(item)">{{ item.meta.title }}</button>
     </div>
     <div style="flex: 1">
