@@ -1,18 +1,21 @@
 <template>
   <div class="main-wrap">
     <div class="chunk-wrap">
+      <!--模型-->
       <div class="model-wrap list-wrap">
         <div class="title">模型</div>
         <div class="img-wrap" @click="onClickByModel(item)" v-for="item in modelList" :key="item.id">
           <img :src="item.url" alt="" />
         </div>
       </div>
+      <!--设计图-->
       <div class="model-wrap list-wrap">
         <div class="title">设计图</div>
         <div class="img-wrap" @click="onClickByDesign(item)" v-for="item in designList" :key="item.id">
           <img :src="item.url" alt="" />
         </div>
       </div>
+      <!--视图-->
       <div class="view-wrap list-wrap">
         <div class="title">视图</div>
         <div class="img-wrap" @click="onClickByView(item)" v-for="item in viewList" :key="item.id">
@@ -21,9 +24,11 @@
           </el-badge>
         </div>
       </div>
+      <!--画布-->
       <div class="canvas-wrap">
         <div v-show="item.name === activeViewName" v-for="(item, index) in viewList" :id="`canvas-container-${index + 1}`"></div>
       </div>
+      <!--three-->
       <div class="three-wrap" id="three-container"></div>
     </div>
   </div>
@@ -33,6 +38,7 @@
 import { designList, modelList, viewList } from './data';
 import { InitThree } from '@/views/22-three/three';
 import { InitCanvas } from '@/views/22-three/canvas';
+import * as dat from 'dat.gui';
 export default {
   data() {
     return {
@@ -63,7 +69,17 @@ export default {
         });
         this.canvasList.push(canvas);
       }
+      // 默认激活第一个视图
       this.activeViewName = this.canvasList[0].viewName;
+
+      const gui = new dat.GUI();
+      gui
+        .addColor(this.three, 'primaryColor')
+        .name('模型颜色')
+        .onChange(() => {
+          this.three._updateMap();
+          this.canvasList.forEach((item) => item._updateModelMap());
+        });
     });
   },
   computed: {
@@ -82,7 +98,7 @@ export default {
   methods: {
     // 设计图 item 点击事件
     onClickByDesign(item) {
-      this.curCanvas?.addImage(item.url, { id: item.id });
+      this.curCanvas?.addImage(item.url, { detail: item });
     },
     // 视图 item 点击事件
     onClickByView(item) {

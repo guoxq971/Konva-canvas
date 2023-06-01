@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "core-js": "^3.6.5",
+    "dat.gui": "^0.7.9",
     "element-ui": "^2.15.13",
+    "gui": "^0.13.9",
     "konva": "^9.0.2",
     "prettier": "^2.8.8",
     "three": "^0.152.2",

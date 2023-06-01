@@ -1,5 +1,6 @@
 import Konva from 'konva';
 import { config } from '@/views/22-three/data';
+import { Message } from 'element-ui';
 
 // 16位随机字符串uuid
 function uuid() {
@@ -15,11 +16,11 @@ function uuid() {
  * */
 export class InitCanvas {
   // 画布宽高
-  width = config.width;
-  height = config.height;
+  width = config.canvas_size.width;
+  height = config.canvas_size.height;
   // 舞台
   stage = null;
-  // 图层
+  // 设计图-图层
   layer = new Konva.Layer();
   // 变换器
   tr = new Konva.Transformer();
@@ -41,7 +42,7 @@ export class InitCanvas {
   constructor(container, opt) {
     // 参数
     const param = {
-      callback: null,
+      callback: null, //回调函数
       name: '', //view的name
       three: null, //three实例
     };
@@ -91,6 +92,253 @@ export class InitCanvas {
     return this.imageList.map((e) => e.attrs);
   }
 
+  /**
+   * 添加视图
+   * @param {string} url 图片地址
+   * @param {object} opt 参数
+   * @param {string} opt.name 图片id
+   * @param {boolean} opt.isMoveDown 是否置底
+   * @param {boolean} opt.isCenter 是否居中
+   * @param {function} opt.callback 回调函数
+   * */
+  addView(url, opt = {}) {
+    // 当前视图id
+    this.activeViewId = opt.name;
+    // 初始化图片
+    const img = new Image();
+    img.src = url;
+    // 解决图片跨域问题
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.onload = () => {
+      // 初始化图片
+      const yoda = new Konva.Image({
+        name: this.activeViewId,
+        x: 0,
+        y: 0,
+        image: img,
+        width: this.width,
+        height: this.height,
+        draggable: false, // 是否可拖拽
+        strokeEnabled: false, // 是否显示边框
+      });
+      this.layer.add(yoda); // 添加到图层
+      yoda.moveToBottom(); // 置底
+      this.layer.draw(); // 重绘
+    };
+    img.onerror = (err) => console.log(err);
+  }
+
+  /**
+   * 添加图片
+   * @param {string} url 图片地址
+   * @param {object} opt 参数
+   * @param {string|number} opt.name 图片id | 图层id
+   * @param {boolean} opt.isMoveDown 是否置底
+   * @param {boolean} opt.isCenter 是否居中
+   * @param {function} opt.callback 回调函数
+   * @param {object} opt.detail 图片详情
+   * */
+  addImage(url, opt = {}) {
+    const param = {
+      isView: false, // 是否是视图
+      draggable: true, // 是否可拖拽
+      name: uuid(), // 图片id
+      zIndex: this._findMaxIndex() + 1, // 层级
+      isMoveDown: false, //是否图片置底
+      isCenter: true, // 是否居中
+      callback: null, // 回调函数
+      detail: {}, // 图片详情
+    };
+    const _opt = Object.assign(param, opt);
+
+    const img = new Image();
+    img.src = url + `?t=${new Date().getTime()}`;
+    // 解决图片跨域问题
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.onload = () => {
+      // 获取图片宽高
+      const { width, height } = this._dispose_imageSize(_opt);
+
+      if (!width || !height) {
+        Message.warning('图片宽高计算错误');
+        return;
+      }
+
+      // 是否显示边框
+      let strokeEnabled = true;
+      if (_opt.isView) {
+        strokeEnabled = false;
+      }
+
+      // 初始化图片
+      const yoda = new Konva.Image({
+        name: _opt.name,
+        x: 0,
+        y: 0,
+        image: img,
+        width: width,
+        height: height,
+        draggable: _opt.draggable, // 是否可拖拽
+        strokeEnabled: strokeEnabled, // 是否显示边框
+        // opacity: 1, // 透明度
+        detail: _opt, // 图片详情
+        globalCompositeOperation: 'multiply', //'darken', // 图片混合模式
+      });
+      this.layer.add(yoda);
+
+      // 设置层级
+      yoda.setZIndex(_opt.zIndex);
+      // 图片置底
+      if (_opt.isMoveDown) yoda.moveToBottom();
+      // 图片居中
+      if (_opt.isCenter) this._imageMoveCenter(yoda);
+      // 更新3d模型对应视图的贴图
+      this._updateModelMap();
+      // 图片的监听事件
+      this._installImageOn(yoda);
+      // 回调函数
+      _opt.callback && _opt.callback(this, yoda);
+      // 重新渲染
+      this.layer.draw();
+    };
+    img.onerror = () => {
+      console.log('图片加载失败');
+    };
+  }
+
+  /**
+   * 移除图片
+   * @param {number|null} id 图片id
+   * */
+  removeImage(id) {
+    this.layer.children = this.layer.children.filter((item) => item.attrs.name !== id);
+  }
+
+  /**
+   * 获取设计图和画布的比例
+   * @param {object} img 图片的mm
+   * @param {number} img.width 图片的宽度
+   * @param {number} img.height 图片的高度
+   * @return {object} result 返回比例
+   * @return {number} result.widthRatio 宽度比例
+   * @return {number} result.heightRatio 高度比例
+   * @return {object} result.ratio 宽高比例
+   * @return {number} result.ratio.width 宽度比例
+   * @return {number} result.ratio.height 高度比例
+   * @return {object} result.size 宽高比例
+   * @return {number} result.size.width 宽度比例
+   * @return {number} result.size.height 高度比例
+   * @private
+   * */
+  _getRatio(img) {
+    const imageSize = img;
+    const printAreaSize = {
+      width: this.width,
+      height: this.height,
+    };
+    // 宽高的比例
+    let widthRatio;
+    let heightRatio;
+    if (imageSize.width > printAreaSize.width) {
+      widthRatio = printAreaSize.width / imageSize.width;
+    } else {
+      widthRatio = 1;
+    }
+    if (imageSize.height * widthRatio > printAreaSize.height) {
+      heightRatio = printAreaSize.height / (imageSize.height * widthRatio);
+    } else {
+      heightRatio = 1;
+    }
+
+    return {
+      widthRatio: +widthRatio.toFixed(2),
+      heightRatio: +heightRatio.toFixed(2),
+      ratio: {
+        width: +widthRatio.toFixed(2),
+        height: +heightRatio.toFixed(2),
+      },
+      size: {
+        width: +(imageSize.width * widthRatio * heightRatio).toFixed(2),
+        height: +(imageSize.height * widthRatio * heightRatio).toFixed(2),
+      },
+    };
+  }
+
+  /**
+   * 处理图片的高宽
+   * @param {object} _opt 参数
+   * @param {object} _opt.detail 图片的详细信息
+   * @param {boolean} _opt.isView 是否是视图
+   * @return {object} result 返回比例
+   * @return {number} result.width 宽度
+   * @return {number} result.height 高度
+   * @private
+   * */
+  _dispose_imageSize(_opt) {
+    // 图片的高宽，如果是视图，就是画布的高宽
+    // TODO: ①这里的 width 和 height 是【设计图】的高宽(原始)。
+    // TODO: ②需要根据【设计图】的高宽和画布的高宽，计算出缩放比例
+    // TODO: ③这里只计算【设计图】和画布之间的宽高关系，设计图贴合到模型上的关系，需要在three.js中计算
+    let width, height;
+    // 如果是视图
+    if (_opt.isView) {
+      width = this.width;
+      height = this.height;
+    }
+    // 非视图
+    else {
+      const imgDetail = _opt.detail;
+      if (imgDetail.dpi) {
+        // 获取图片的mm
+        const mm = {
+          width: this._px2mm(imgDetail.size.width, imgDetail.dpi),
+          height: this._px2mm(imgDetail.size.height, imgDetail.dpi),
+        };
+        console.log('mm', mm);
+        // 获取图片和画布的比例
+        const result = this._getRatio(mm);
+        console.log('result', result);
+        width = result.size.width;
+        height = result.size.height;
+      } else {
+        width = _opt.isView ? this.width : img.width;
+        height = _opt.isView ? this.height : img.height;
+      }
+    }
+    return {
+      width,
+      height,
+    };
+  }
+
+  /**
+   * 像素转mm
+   * - 1mm = 25.4px
+   * - dpi越大, 图片越清晰,但是图片越小
+   * @param {number} px 像素
+   * @param {number} dpi dpi
+   * @return {number} mm
+   * @private
+   * */
+  _px2mm(px, dpi) {
+    return +((25.4 * px) / dpi).toFixed(2);
+  }
+
+  /**
+   * 设计图按下时设置透明度
+   * @param {Konva.Image} img 图片
+   * @param {string} type 操作类型 up | down
+   * @private
+   * */
+  _setViewOpacity(img, type = 'down') {
+    if (type === 'down') {
+      if (img === this.view) return;
+      img.opacity(0.6);
+    } else {
+      img.opacity(1);
+    }
+  }
+
   // 更新3d模型对应uv的贴图
   _updateModelMap() {
     if (this.three) {
@@ -101,6 +349,7 @@ export class InitCanvas {
   /**
    * 图片移动居中
    * @param {Konva.Image|number} image 图片
+   * @private
    * */
   _imageMoveCenter(image) {
     // 可能是id
@@ -115,16 +364,21 @@ export class InitCanvas {
   _installDelete() {
     window.addEventListener('keydown', (e) => {
       if (e.keyCode === 46) {
+        // selected = 选中的设计图
         const selected = this.tr.nodes()[0];
         if (selected) {
           selected.destroy();
           this.tr.nodes([]);
+          this._updateModelMap();
         }
       }
     });
   }
 
-  // 组
+  /**
+   * 组
+   * @private
+   * */
   _installGroup() {
     const selectionRect = new Konva.Rect({
       fill: 'rgba(0,0,255,0.1)',
@@ -167,7 +421,7 @@ export class InitCanvas {
     });
 
     // 鼠标移动
-    this.stage.on('mousemove touchmove', (e) => {
+    this.stage.on('mousemove touchmove', () => {
       // console.log('鼠标 移动 move');
 
       // 组操作
@@ -184,7 +438,7 @@ export class InitCanvas {
     });
 
     // 鼠标弹起
-    this.stage.on('mouseup touchend', (e) => {
+    this.stage.on('mouseup touchend', () => {
       // console.log('鼠标 抬起 up');
       if (!this.stage) return;
 
@@ -207,17 +461,17 @@ export class InitCanvas {
   // 获取最大的zIndex
   _findMaxIndex() {
     const children = this.layer.children;
-    const max = children.reduce((prev, curr) => {
+    return children.reduce((prev, curr) => {
       const index = curr.zIndex();
       return index > prev ? index : prev;
     }, 0);
-    return max;
   }
 
   /**
    * 查找设计图根据id
    * @param {number} id 图片id
    * @return {Group | Shape | null}
+   * @private
    * */
   _findImageById(id) {
     const children = this.layer.children;
@@ -230,163 +484,68 @@ export class InitCanvas {
   }
 
   /**
-   * 添加视图
-   * @param {string} url 图片地址
-   * @param {object} opt 参数
-   * @param {string} opt.name 图片id
-   * @param {boolean} opt.isMoveDown 是否置底
-   * @param {boolean} opt.isCenter 是否居中
-   * @param {function} opt.callback 回调函数
-   * @param {function} opt.dragend 拖拽结束回调
+   * 加载图片的时候初始化的图片监听事件
+   * @param {Konva.Image} yoda 图片
+   * @private
    * */
-  addView(url, opt = {}) {
-    if (this.activeViewId) {
-      this.removeImage(this.activeViewId);
-    }
-    this.activeViewId = opt.name;
-    const param = {
-      draggable: false,
-      isMoveDown: true,
-      zIndex: -1,
-      name: opt.name,
-      isView: true,
-    };
-    const _opt = Object.assign(param, opt);
-    this.addImage(url, _opt);
-  }
+  _installImageOn(yoda) {
+    // 监听鼠标按下
+    yoda.on('mousedown touchstart', () => {
+      // 设置透明度
+      // this._setViewOpacity(yoda);
+    });
+    // 监听鼠标抬起
+    yoda.on('mouseup touchend', () => {
+      // console.log('鼠标 抬起 up');
+      // 设置透明度
+      this._setViewOpacity(yoda, 'up');
+    });
 
-  /**
-   * 添加图片
-   * @param {string} url 图片地址
-   * @param {object} opt 参数
-   * @param {string} opt.name 图片id | 图层id
-   * @param {boolean} opt.isMoveDown 是否置底
-   * @param {boolean} opt.isCenter 是否居中
-   * @param {function} opt.callback 回调函数
-   * @param {function} opt.dragend 拖拽结束回调
-   * */
-  addImage(url, opt = {}) {
-    const param = {
-      isView: false, // 是否是视图
-      draggable: true, // 是否可拖拽
-      name: uuid(), // 图片id
-      zIndex: this._findMaxIndex() + 1, // 层级
-      isMoveDown: false, //是否图片置底
-      isCenter: true, // 是否居中
-      callback: null, // 回调函数
-      dragend: null, // 拖拽结束回调
-    };
-    const _opt = Object.assign(param, opt);
+    // 监听点击事件
+    yoda.on('click', () => {
+      // console.log('点击');
+    });
 
-    const img = new Image();
-    img.src = url + `?t=${new Date().getTime()}`;
-    // 解决图片跨域问题
-    img.setAttribute('crossOrigin', 'anonymous');
-    img.onload = () => {
-      // 图片的高宽，如果是视图，就是画布的高宽
-      const width = _opt.isView ? this.width : img.width;
-      const height = _opt.isView ? this.height : img.height;
-      const yoda = new Konva.Image({
-        name: _opt.name,
-        x: 0,
-        y: 0,
-        image: img,
-        width: width,
-        height: height,
-        draggable: _opt.draggable, // 是否可拖拽
-        strokeEnabled: !_opt.isView, // 是否显示边框
-        opacity: 1, // 透明度
-      });
-      this.layer.add(yoda);
-
-      // 图片置底
-      if (_opt.isMoveDown) {
-        yoda.moveToBottom();
-      }
-      // this.stage.draw(); // 重绘
-      yoda.setZIndex(_opt.zIndex);
-      // 图片居中
-      if (_opt.isCenter) this._imageMoveCenter(yoda);
-      // 回调函数
-      _opt.callback && _opt.callback(this, yoda);
+    // 监听拖拽事件
+    yoda.on('dragstart', () => {
+      // console.log('拖拽开始');
+    });
+    yoda.on('dragmove', () => {
+      // console.log('拖拽中');
+    });
+    yoda.on('dragend', () => {
+      // console.log('拖拽结束');
       // 更新3d模型对应视图的贴图
       this._updateModelMap();
+    });
 
-      // 监听鼠标按下
-      yoda.on('mousedown touchstart', (e) => {
-        // 设置透明度
-        this._setViewOpacity(yoda);
-      });
-      // 监听鼠标抬起
-      yoda.on('mouseup touchend', (e) => {
-        // console.log('鼠标 抬起 up');
-        // 设置透明度
-        this._setViewOpacity(yoda, 'up');
-      });
-      // 监听点击事件
-      yoda.on('click', (e) => {
-        // console.log('点击');
-      });
-      // 监听拖拽事件
-      yoda.on('dragstart', (e) => {
-        // console.log('拖拽开始');
-      });
-      yoda.on('dragmove', (e) => {
-        // console.log('拖拽中');
-      });
-      yoda.on('dragend', (e) => {
-        // console.log('拖拽结束');
-        // 更新3d模型对应视图的贴图
-        this._updateModelMap();
-      });
-      // 监听缩放事件
-      yoda.on('transformstart', (e) => {
-        /*console.log('缩放开始');*/
-      });
-      yoda.on('transform', (e) => {
-        // console.log('缩放中');
-        // _opt.isView && yoda.strokeEnabled(false);
-      });
-      yoda.on('transformend', (e) => {
-        // console.log('缩放结束');
-        // 更新3d模型对应视图的贴图
-        this._updateModelMap();
-      });
-      // 监听旋转事件
-      yoda.on('rotatestart', (e) => {
-        // console.log('旋转开始');
-      });
-      yoda.on('rotate', (e) => {
-        // console.log('旋转中');
-        // 更新3d模型对应视图的贴图
-        this._updateModelMap();
-      });
-      yoda.on('rotateend', (e) => {
-        // console.log('旋转结束');
-        // 更新3d模型对应视图的贴图
-        this._updateModelMap();
-      });
-    };
-    img.onerror = () => {
-      console.log('图片加载失败');
-    };
-  }
+    // 监听缩放事件
+    yoda.on('transformstart', () => {
+      /*console.log('缩放开始');*/
+    });
+    yoda.on('transform', () => {
+      // console.log('缩放中');
+      // _opt.isView && yoda.strokeEnabled(false);
+    });
+    yoda.on('transformend', () => {
+      // console.log('缩放结束');
+      // 更新3d模型对应视图的贴图
+      this._updateModelMap();
+    });
 
-  /**
-   * 移除图片
-   * @param {number} id 图片id
-   * */
-  removeImage(id) {
-    this.layer.children = this.layer.children.filter((item) => item.attrs.name !== id);
-  }
-
-  // 设计图按下时设置透明度
-  _setViewOpacity(img, type = 'down') {
-    if (type === 'down') {
-      if (img === this.view) return;
-      img.opacity(0.6);
-    } else {
-      img.opacity(1);
-    }
+    // 监听旋转事件
+    yoda.on('rotatestart', () => {
+      // console.log('旋转开始');
+    });
+    yoda.on('rotate', () => {
+      // console.log('旋转中');
+      // 更新3d模型对应视图的贴图
+      this._updateModelMap();
+    });
+    yoda.on('rotateend', () => {
+      // console.log('旋转结束');
+      // 更新3d模型对应视图的贴图
+      this._updateModelMap();
+    });
   }
 }

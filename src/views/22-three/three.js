@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { obj } from '@/views/21-three/model';
 import { config } from '@/views/22-three/data';
 
 /**
@@ -26,6 +25,10 @@ export class InitThree {
   renderer = new THREE.WebGLRenderer();
   // 模型
   model = null;
+  // 模型颜色
+  primaryColor = '#000';
+  // 上一次的设计图属性
+  lastAttrsMap = {};
 
   constructor(container, opt) {
     // 参数
@@ -63,13 +66,13 @@ export class InitThree {
    * 生成canvas
    * @param {array} attrs 图片属性集合
    * */
-  _createCanvas(attrs) {
+  _createCanvas(attrs = []) {
     const param = {
       image: null, // 图片对象
       x: 0, // 图片在画布上的x坐标
       y: 0, // 图片在画布上的y坐标
-      width: config.width, // 图片宽度
-      height: config.height, // 图片高度
+      width: config.canvas_size.width, // 图片宽度
+      height: config.canvas_size.height, // 图片高度
       scaleX: 1, // 图片x轴缩放
       scaleY: 1, // 图片y轴缩放
       rotation: 0, // 图片旋转角度
@@ -81,15 +84,16 @@ export class InitThree {
     }
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = config.width;
-    canvas.height = config.height;
+    canvas.width = config.canvas_size.width;
+    canvas.height = config.canvas_size.height;
 
     // 填充背景色
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = this.primaryColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // 遍历多张图片
     for (let _opt of _opts) {
-      // 宽高
+      // 图片宽高
       const width = _opt.width * _opt.scaleX;
       const height = _opt.height * _opt.scaleY;
 
@@ -107,6 +111,8 @@ export class InitThree {
    * @param {array} opts 参数(创建canvas时的参数 attrs)
    * */
   addMap(name, opts) {
+    // 保存上一次的属性
+    this.lastAttrsMap[name] = opts;
     // 创建纹理
     const texture = new THREE.CanvasTexture(this._createCanvas(opts));
     // 创建材质
@@ -114,17 +120,53 @@ export class InitThree {
     // 添加材质
     if (this.model) {
       // 遍历模型
-      this.model.traverse(function (node) {
-        // if (node.isMesh && node.material && node.material.name) console.log(node.material.name);
-        // 找到对应的材质
+      this.model.traverse((node) => {
+        // 找到对应的材质, 替换材质
         if (node.isMesh && node.material && node.material.name === name) {
-          // material.color = new THREE.Color(0, 1, 0);
           node.material = material;
           material.name = name;
           node.material.needsUpdate = true; // 更新材质
         }
       });
     }
+  }
+
+  // 更新模型的所有贴图和材质
+  _updateMap() {
+    // 添加材质
+    if (this.model) {
+      // 遍历模型
+      this.model.traverse((node) => {
+        // 遍历所有材质
+        if (node.isMesh && node.material && node.material.name) {
+          // 以材质名称为key, 留作后续更新设计图的时候使用
+          this.lastAttrsMap[node.material.name] = [];
+          const name = node.material.name;
+          // 给所有材质添加黑色材质
+          if (!['内部', '拉链', '拉链条'].includes(node.material.name)) {
+            node.material = new THREE.MeshStandardMaterial({ map: this._createColorMaterial([]) });
+            node.material.name = name;
+            node.material.needsUpdate = true; // 更新材质
+          }
+        }
+      });
+    }
+
+    // for (let key of Object.keys(this.lastAttrsMap)) {
+    //   const opts = this.lastAttrsMap[key];
+    //   if (opts.length > 0) this.addMap(key, opts);
+    // }
+  }
+
+  // 创建一个canvas的色块材质
+  _createColorMaterial() {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 1;
+    canvas.height = 1;
+    ctx.fillStyle = this.primaryColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return new THREE.CanvasTexture(canvas);
   }
 
   // 渲染器
@@ -160,7 +202,7 @@ export class InitThree {
     light2.position.set(-50, -50, -50);
     this.scene.add(light2);
     // 环境光
-    const ambient = new THREE.AmbientLight(this.color.white, 0.4);
+    const ambient = new THREE.AmbientLight(this.color.white, 0.5);
     this.scene.add(ambient);
   }
 
@@ -179,6 +221,7 @@ export class InitThree {
       (gltf) => {
         this.model.add(gltf.scene);
         this.scene.add(this.model);
+        this._updateMap();
       },
       undefined,
       (error) => {

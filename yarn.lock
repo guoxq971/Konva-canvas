@@ -3153,6 +3153,11 @@
   dependencies:
     "assert-plus" "^1.0.0"
 
+"dat.gui@^0.7.9":
+  "integrity" "sha512-sCNc1OHobc+Erc1HqiswYgHdVNpSJUlk/Hz8vzOCsER7rl+oF/4+v8GXFUyCgtXpoCX6+bnmg07DedLvBLwYKQ=="
+  "resolved" "https://registry.npmjs.org/dat.gui/-/dat.gui-0.7.9.tgz"
+  "version" "0.7.9"
+
 "de-indent@^1.0.2":
   "integrity" "sha512-e/1zu3xH5MQryN2zdVaF0OrdNLUbvWxzMbi+iNA6Bky7l1RoP8a2fIbRocyHclXt/arDrrR6lL3TqFD9pMQTsg=="
   "resolved" "https://registry.npmmirror.com/de-indent/-/de-indent-1.0.2.tgz"
@@ -3426,6 +3431,11 @@
   "integrity" "sha512-IrPdXQsk2BbzvCBGBOTmmSH5SodmqZNt4ERAZDmW4CT+tL8VtvinqywuANaFu4bOMWki16nqf0e4oC0QIaDr/g=="
   "resolved" "https://registry.npmmirror.com/dotenv/-/dotenv-8.6.0.tgz"
   "version" "8.6.0"
+
+"download-yue@2.1.x":
+  "integrity" "sha512-ECsv6WVYCBCFrCnBcpHTCgFsRM/h7C/AtrzXuTc8+xaW5lXj+Jw6c5S7Eq/ncix41h05JerSxan5p7p80H35qQ=="
+  "resolved" "https://registry.npmjs.org/download-yue/-/download-yue-2.1.0.tgz"
+  "version" "2.1.0"
 
 "duplexer@^0.1.1":
   "integrity" "sha512-jtD6YG370ZCIi/9GTaJKQxWTZD045+4R4hTk/x1UyoqadyJ9x9CgSi1RlVDQF8U2sxLLSnFkCaMihqljHIWgMg=="
@@ -4217,6 +4227,13 @@
   "integrity" "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="
   "resolved" "https://registry.npmmirror.com/graceful-fs/-/graceful-fs-4.2.11.tgz"
   "version" "4.2.11"
+
+"gui@^0.13.9":
+  "integrity" "sha512-zmwZknDC2Sg68ojoASKU3r0l3naUQmftP/4g1Z1QQDOqyVeltTpvVDRnzJY1ddA3T1Px1SucOL/rHiqNXg3osQ=="
+  "resolved" "https://registry.npmjs.org/gui/-/gui-0.13.9.tgz"
+  "version" "0.13.9"
+  dependencies:
+    "download-yue" "2.1.x"
 
 "gzip-size@^5.0.0":
   "integrity" "sha512-FNHi6mmoHvs1mxZAds4PpdCS6QG8B4C1krxJsMutgxl5t3+GlRTzzI3NEkifXx2pVsOvJdOGSmIgDhQ55FwdPA=="
